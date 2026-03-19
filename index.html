@@ -3,760 +3,669 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Apollo Deal Tracking — Work Package Framework v2</title>
+<title>Apollo — Work Package Framework</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #0a0e1a; color: #e0e4ef; min-height: 100vh; }
-
-  .header { padding: 40px 60px 20px; }
-  .header h1 { font-size: 28px; font-weight: 700; color: #fff; letter-spacing: -0.5px; }
-  .header p { font-size: 14px; color: #7a8199; margin-top: 6px; }
-  .header .version { font-size: 11px; color: #4a6cf7; margin-top: 4px; font-weight: 600; }
-
-  .tabs { display: flex; gap: 4px; padding: 0 60px; margin-bottom: 30px; flex-wrap: wrap; }
-  .tab { padding: 10px 20px; border-radius: 8px 8px 0 0; cursor: pointer; font-size: 13px; font-weight: 600; background: #131829; color: #7a8199; border: 1px solid #1e2540; border-bottom: none; transition: all 0.2s; }
-  .tab.active { background: #1a2038; color: #fff; border-color: #2a3560; }
-  .tab:hover:not(.active) { color: #aab0c6; }
-
-  .view { display: none; padding: 0 60px 60px; }
-  .view.active { display: block; }
-
-  /* === VIEW 1: TWO-LAYER MODEL === */
-  .two-layer { margin-top: 10px; }
-  .layer-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px; padding-left: 4px; }
-  .layer-label.deal { color: #a855f7; }
-  .layer-label.system { color: #4a6cf7; }
-
-  .lifecycle { display: flex; align-items: stretch; gap: 0; margin-bottom: 0; }
-  .stage { flex: 1; position: relative; padding: 24px 20px; background: #131829; border: 1px solid #1e2540; }
-  .stage:first-child { border-radius: 12px 0 0 0; }
-  .stage:last-child { border-radius: 0 12px 0 0; }
-  .stage-number { font-size: 10px; font-weight: 700; color: #a855f7; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px; }
-  .stage h3 { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 4px; }
-  .stage p { font-size: 11px; color: #7a8199; line-height: 1.5; }
-  .stage .arrow { position: absolute; right: -14px; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; background: #a855f7; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 2; font-size: 12px; color: #fff; }
-  .stage:last-child .arrow { display: none; }
-  .stage-tag { display: inline-block; margin-top: 10px; padding: 3px 10px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-  .tag-human { background: rgba(168,85,247,0.15); color: #a855f7; }
-  .tag-system { background: rgba(74,108,247,0.15); color: #4a6cf7; }
-  .tag-both { background: rgba(34,197,94,0.15); color: #22c55e; }
-
-  .system-layer { display: flex; align-items: stretch; gap: 0; }
-  .sys-block { position: relative; padding: 20px; background: #0d1225; border: 1px solid #1a2550; }
-  .sys-block:first-child { border-radius: 0 0 0 12px; }
-  .sys-block:last-child { border-radius: 0 0 12px 0; }
-  .sys-block h4 { font-size: 13px; font-weight: 700; color: #4a6cf7; margin-bottom: 4px; }
-  .sys-block p { font-size: 11px; color: #5a6280; line-height: 1.5; }
-  .sys-block .span-label { font-size: 9px; color: #4a6cf7; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; display: block; }
-  .sys-wide { flex: 2; }
-  .sys-single { flex: 1; }
-  .sys-none { flex: 1; background: #0a0e1a; border: 1px dashed #1e2540; display: flex; align-items: center; justify-content: center; }
-  .sys-none p { color: #3a4060; font-style: italic; font-size: 11px; text-align: center; }
-
-  .bridge-row { display: flex; align-items: center; gap: 0; }
-  .bridge { flex: 1; display: flex; align-items: center; justify-content: center; padding: 6px 0; }
-  .bridge span { font-size: 10px; color: #2a3560; }
-  .bridge-active span { color: #4a6cf7; font-weight: 600; }
-
-  /* === VIEW 2: THREE DIMENSIONS === */
-  .dimensions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-top: 10px; }
-  .dimension { background: #131829; border: 1px solid #1e2540; border-radius: 12px; padding: 28px; }
-  .dimension-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 16px; }
-  .dim-vertical .dimension-icon { background: rgba(74,108,247,0.15); }
-  .dim-horizontal .dimension-icon { background: rgba(34,197,94,0.15); }
-  .dim-depth .dimension-icon { background: rgba(251,191,36,0.15); }
-  .dimension h3 { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 4px; }
-  .dimension .subtitle { font-size: 12px; color: #4a6cf7; font-weight: 600; margin-bottom: 12px; }
-  .dim-horizontal .subtitle { color: #22c55e; }
-  .dim-depth .subtitle { color: #fbbf24; }
-  .dimension p { font-size: 12px; color: #7a8199; line-height: 1.6; margin-bottom: 16px; }
-  .dim-items { display: flex; flex-direction: column; gap: 6px; }
-  .dim-item { padding: 8px 12px; background: #0d1120; border-radius: 6px; font-size: 11px; color: #aab0c6; display: flex; justify-content: space-between; align-items: center; }
-  .dim-item .status { font-size: 10px; padding: 2px 8px; border-radius: 3px; font-weight: 600; }
-  .status-gating { background: rgba(239,68,68,0.15); color: #ef4444; }
-  .status-question { background: rgba(74,108,247,0.15); color: #4a6cf7; }
-  .status-active { background: rgba(34,197,94,0.15); color: #22c55e; }
-  .status-source { background: rgba(251,191,36,0.15); color: #fbbf24; }
-
-  /* === VIEW 3: GOLDEN ANSWER STATES === */
-  .answer-states { margin-top: 10px; }
-  .state-flow { display: flex; align-items: stretch; gap: 0; margin-bottom: 30px; }
-  .state-card { flex: 1; padding: 24px 20px; background: #131829; border: 1px solid #1e2540; position: relative; }
-  .state-card:first-child { border-radius: 12px 0 0 12px; }
-  .state-card:last-child { border-radius: 0 12px 12px 0; }
-  .state-card .arrow { position: absolute; right: -14px; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; background: #2a3560; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 2; font-size: 12px; color: #7a8199; }
-  .state-card:last-child .arrow { display: none; }
-  .state-card h4 { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
-  .state-card p { font-size: 11px; color: #7a8199; line-height: 1.5; }
-  .state-card .state-dot { width: 10px; height: 10px; border-radius: 50%; margin-bottom: 10px; }
-  .dot-unanswered { background: #3a4060; }
-  .dot-suggested { background: #4a6cf7; }
-  .dot-confirmed { background: #22c55e; }
-  .dot-challenged { background: #f59e0b; }
-  .state-1 h4 { color: #7a8199; }
-  .state-2 h4 { color: #4a6cf7; }
-  .state-3 h4 { color: #22c55e; }
-  .state-4 h4 { color: #f59e0b; }
-
-  .scenario-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  .scenario { background: #131829; border: 1px solid #1e2540; border-radius: 10px; padding: 20px; }
-  .scenario h4 { font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 8px; }
-  .scenario-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; display: block; }
-  .scenario-label.happy { color: #22c55e; }
-  .scenario-label.conflict { color: #f59e0b; }
-  .scenario-step { display: flex; gap: 10px; padding: 6px 0; font-size: 11px; color: #aab0c6; line-height: 1.4; }
-  .scenario-step .step-num { width: 18px; height: 18px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; flex-shrink: 0; background: rgba(74,108,247,0.15); color: #4a6cf7; }
-
-  /* === VIEW 4: CURRENT vs FUTURE === */
-  .comparison { display: grid; grid-template-columns: 1fr 40px 1fr; gap: 0; margin-top: 10px; align-items: start; }
-  .compare-col { background: #131829; border: 1px solid #1e2540; border-radius: 12px; padding: 28px; }
-  .compare-arrow { display: flex; align-items: center; justify-content: center; align-self: center; font-size: 24px; color: #4a6cf7; }
-  .compare-col h3 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
-  .compare-col.current h3 { color: #ef4444; }
-  .compare-col.future h3 { color: #22c55e; }
-  .compare-col .compare-sub { font-size: 11px; color: #7a8199; margin-bottom: 20px; }
-  .compare-row { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 1px solid #1e2540; }
-  .compare-row:last-child { border-bottom: none; }
-  .compare-num { width: 24px; height: 24px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
-  .current .compare-num { background: rgba(239,68,68,0.15); color: #ef4444; }
-  .future .compare-num { background: rgba(34,197,94,0.15); color: #22c55e; }
-  .compare-text { font-size: 12px; color: #aab0c6; line-height: 1.5; }
-  .compare-text strong { color: #fff; }
-
-  /* === VIEW 5: PRODUCT MAPPING === */
-  .mapping { margin-top: 10px; }
-  .map-section { margin-bottom: 24px; }
-  .map-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px; padding-left: 4px; }
-  .map-label.excel { color: #ef4444; }
-  .map-label.module { color: #4a6cf7; }
-  .map-label.wp { color: #22c55e; }
-  .map-cards { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
-  .map-card { background: #131829; border: 1px solid #1e2540; border-radius: 10px; padding: 20px; }
-  .map-card h4 { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 6px; }
-  .map-card p { font-size: 11px; color: #7a8199; line-height: 1.5; }
-  .map-card .map-tag { display: inline-block; margin-top: 10px; padding: 3px 10px; border-radius: 4px; font-size: 10px; font-weight: 600; }
-  .map-card.excel-card { border-left: 3px solid #ef4444; }
-  .map-card.module-card { border-left: 3px solid #4a6cf7; }
-  .map-card.wp-card { border-left: 3px solid #22c55e; }
-  .map-card.agent-card { border-left: 3px solid #3a4060; }
-
-  .connector { display: flex; align-items: center; justify-content: center; padding: 14px 0; }
-  .connector-line { display: flex; align-items: center; gap: 10px; color: #7a8199; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
-  .connector-line::before, .connector-line::after { content: ''; flex: 1; height: 1px; background: linear-gradient(to right, transparent, #2a3560, transparent); min-width: 80px; }
-
-  /* === VIEW 6: DESIGN CONSTRAINTS === */
-  .constraints { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px; }
-  .constraint { background: #131829; border: 1px solid #1e2540; border-radius: 12px; padding: 24px; }
-  .constraint-icon { font-size: 20px; margin-bottom: 12px; }
-  .constraint h3 { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 4px; }
-  .constraint .constraint-sub { font-size: 11px; font-weight: 600; margin-bottom: 12px; }
-  .constraint-sub.batch { color: #f59e0b; }
-  .constraint-sub.upload { color: #22c55e; }
-  .constraint-sub.agent { color: #7a8199; }
-  .constraint-sub.scope { color: #ef4444; }
-  .constraint p { font-size: 12px; color: #7a8199; line-height: 1.6; }
-  .constraint .implication { margin-top: 12px; padding: 10px 14px; background: #0d1120; border-radius: 6px; font-size: 11px; line-height: 1.5; }
-  .constraint .implication strong { color: #4a6cf7; }
-
-  /* === VIEW 7: CROSS-CLIENT === */
-  .cross-client { margin-top: 10px; }
-  .client-row { display: grid; grid-template-columns: 140px 1fr 1fr 1fr 1fr; gap: 0; margin-bottom: 2px; }
-  .client-row.header-row .cell { background: #1a2038; font-weight: 700; color: #fff; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
-  .cell { padding: 16px 18px; background: #131829; border: 1px solid #1e2540; font-size: 12px; color: #aab0c6; line-height: 1.5; }
-  .cell:first-child { font-weight: 600; color: #fff; }
-  .client-row:first-child .cell:first-child { border-radius: 12px 0 0 0; }
-  .client-row:first-child .cell:last-child { border-radius: 0 12px 0 0; }
-  .client-row:last-child .cell:first-child { border-radius: 0 0 0 12px; }
-  .client-row:last-child .cell:last-child { border-radius: 0 0 12px 0; }
-  .cell-highlight { color: #4a6cf7; font-weight: 600; }
-
-  .footer-note { margin-top: 40px; padding: 20px 24px; background: rgba(74,108,247,0.08); border: 1px solid rgba(74,108,247,0.2); border-radius: 10px; font-size: 12px; color: #7a8199; line-height: 1.6; }
-  .footer-note strong { color: #4a6cf7; }
-
-  /* === RESPONSIVE: TABLET (<=900px) === */
-  @media (max-width: 900px) {
-    .header { padding: 30px 24px 16px; }
-    .header h1 { font-size: 22px; }
-    .tabs { padding: 0 24px; gap: 6px; }
-    .tab { padding: 8px 14px; font-size: 12px; }
-    .view { padding: 0 24px 40px; }
-
-    .lifecycle { flex-direction: column; gap: 2px; }
-    .stage { border-radius: 0 !important; padding: 20px; }
-    .stage:first-child { border-radius: 12px 12px 0 0 !important; }
-    .stage:last-child { border-radius: 0 0 12px 12px !important; }
-    .stage .arrow { right: auto; left: 50%; bottom: -14px; top: auto; transform: translateX(-50%); }
-    .stage .arrow::after { content: '↓'; }
-    .stage .arrow { font-size: 0; }
-    .stage .arrow::after { font-size: 12px; }
-
-    .bridge-row { flex-direction: column; }
-    .bridge { padding: 3px 0; }
-
-    .system-layer { flex-direction: column; gap: 2px; }
-    .sys-block { border-radius: 0 !important; }
-    .sys-block:first-child { border-radius: 12px 12px 0 0 !important; }
-    .sys-block:last-child { border-radius: 0 0 12px 12px !important; }
-
-    .dimensions { grid-template-columns: 1fr; }
-    .state-flow { flex-direction: column; gap: 2px; }
-    .state-card { border-radius: 0 !important; }
-    .state-card:first-child { border-radius: 12px 12px 0 0 !important; }
-    .state-card:last-child { border-radius: 0 0 12px 12px !important; }
-    .state-card .arrow { right: auto; left: 50%; bottom: -14px; top: auto; transform: translateX(-50%); }
-    .state-card .arrow::after { content: '↓'; }
-    .state-card .arrow { font-size: 0; }
-    .state-card .arrow::after { font-size: 12px; }
-
-    .scenario-grid { grid-template-columns: 1fr; }
-
-    .comparison { grid-template-columns: 1fr; gap: 0; }
-    .compare-arrow { padding: 16px 0; font-size: 20px; transform: rotate(90deg); }
-
-    .map-cards { grid-template-columns: 1fr; }
-    .constraints { grid-template-columns: 1fr; }
-
-    .cross-client { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .client-row { min-width: 700px; }
+  :root {
+    --bg: #fafafa;
+    --surface: #ffffff;
+    --surface-hover: #f5f5f7;
+    --border: rgba(0,0,0,0.06);
+    --border-strong: rgba(0,0,0,0.1);
+    --text: #1d1d1f;
+    --text-secondary: #6e6e73;
+    --text-tertiary: #86868b;
+    --accent: #0071e3;
+    --accent-light: rgba(0,113,227,0.08);
+    --purple: #af52de;
+    --purple-light: rgba(175,82,222,0.08);
+    --green: #34c759;
+    --green-light: rgba(52,199,89,0.08);
+    --orange: #ff9f0a;
+    --orange-light: rgba(255,159,10,0.08);
+    --red: #ff3b30;
+    --red-light: rgba(255,59,48,0.08);
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.05), 0 1px 3px rgba(0,0,0,0.06);
+    --shadow-lg: 0 12px 40px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04);
+    --radius: 16px;
+    --radius-sm: 10px;
   }
 
-  /* === RESPONSIVE: PHONE (<=520px) === */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+
+  /* === HEADER === */
+  .header { max-width: 960px; margin: 0 auto; padding: 60px 24px 0; text-align: center; }
+  .header h1 { font-size: 40px; font-weight: 700; letter-spacing: -0.5px; color: var(--text); line-height: 1.15; }
+  .header .subtitle { font-size: 17px; color: var(--text-secondary); margin-top: 12px; line-height: 1.5; max-width: 600px; margin-left: auto; margin-right: auto; }
+  .header .meta { font-size: 12px; color: var(--text-tertiary); margin-top: 16px; }
+
+  /* === NAV === */
+  .nav-wrap { position: sticky; top: 0; z-index: 100; background: rgba(250,250,250,0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); margin-top: 40px; }
+  .nav { max-width: 960px; margin: 0 auto; padding: 0 24px; display: flex; gap: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .nav::-webkit-scrollbar { display: none; }
+  .nav-item { padding: 14px 20px; font-size: 13px; font-weight: 500; color: var(--text-tertiary); cursor: pointer; white-space: nowrap; border-bottom: 2px solid transparent; transition: all 0.2s; }
+  .nav-item:hover { color: var(--text-secondary); }
+  .nav-item.active { color: var(--text); border-bottom-color: var(--text); font-weight: 600; }
+
+  /* === CONTENT === */
+  .content { max-width: 960px; margin: 0 auto; padding: 0 24px 80px; }
+  .view { display: none; padding-top: 48px; }
+  .view.active { display: block; }
+  .view-intro { margin-bottom: 40px; }
+  .view-intro h2 { font-size: 28px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 8px; }
+  .view-intro p { font-size: 15px; color: var(--text-secondary); line-height: 1.65; max-width: 680px; }
+
+  /* === CARDS === */
+  .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-md); border: 1px solid var(--border); padding: 32px; transition: box-shadow 0.3s ease; }
+  .card:hover { box-shadow: var(--shadow-lg); }
+  .card-sm { padding: 24px; border-radius: var(--radius-sm); }
+
+  /* === FLOW (horizontal stages) === */
+  .flow { display: grid; gap: 12px; margin-bottom: 32px; }
+  .flow-5 { grid-template-columns: repeat(5, 1fr); }
+  .flow-4 { grid-template-columns: repeat(4, 1fr); }
+  .flow-3 { grid-template-columns: repeat(3, 1fr); }
+  .flow-item { background: var(--surface); border-radius: var(--radius-sm); box-shadow: var(--shadow-sm); border: 1px solid var(--border); padding: 24px 20px; position: relative; }
+  .flow-item .step-num { font-size: 11px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .flow-item h3 { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+  .flow-item p { font-size: 13px; color: var(--text-secondary); line-height: 1.55; }
+  .flow-item .badge { display: inline-block; margin-top: 12px; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+  .badge-purple { background: var(--purple-light); color: var(--purple); }
+  .badge-blue { background: var(--accent-light); color: var(--accent); }
+  .badge-green { background: var(--green-light); color: var(--green); }
+  .badge-grey { background: rgba(0,0,0,0.04); color: var(--text-tertiary); }
+
+  /* === CONNECTOR between flow rows === */
+  .flow-connector { display: flex; align-items: center; justify-content: center; padding: 8px 0; }
+  .flow-connector span { font-size: 12px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 12px; }
+  .flow-connector span::before, .flow-connector span::after { content: ''; width: 60px; height: 1px; background: var(--border-strong); }
+
+  /* === GRID LAYOUTS === */
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+
+  /* === DIMENSION CARDS === */
+  .dim-card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-md); border: 1px solid var(--border); padding: 28px; }
+  .dim-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; margin-bottom: 16px; }
+  .dim-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+  .dim-card .dim-source { font-size: 12px; font-weight: 600; margin-bottom: 12px; }
+  .dim-card p { font-size: 13px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 16px; }
+  .dim-list { display: flex; flex-direction: column; gap: 4px; }
+  .dim-list-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: var(--surface-hover); border-radius: 8px; font-size: 12px; color: var(--text-secondary); }
+  .dim-list-item .tag { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 4px; }
+  .tag-red { background: var(--red-light); color: var(--red); }
+  .tag-blue { background: var(--accent-light); color: var(--accent); }
+  .tag-green { background: var(--green-light); color: var(--green); }
+  .tag-orange { background: var(--orange-light); color: var(--orange); }
+
+  /* === STATE DOTS === */
+  .state-dot { width: 10px; height: 10px; border-radius: 50%; margin-bottom: 12px; }
+
+  /* === SCENARIO CARDS === */
+  .scenario-card { background: var(--surface); border-radius: var(--radius-sm); box-shadow: var(--shadow-sm); border: 1px solid var(--border); padding: 24px; }
+  .scenario-card .scenario-type { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .scenario-card h4 { font-size: 14px; font-weight: 700; margin-bottom: 14px; }
+  .scenario-step { display: flex; gap: 10px; padding: 5px 0; font-size: 12px; color: var(--text-secondary); line-height: 1.45; }
+  .scenario-step .sn { width: 20px; height: 20px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; background: var(--accent-light); color: var(--accent); }
+
+  /* === COMPARISON === */
+  .compare-wrap { display: grid; grid-template-columns: 1fr 40px 1fr; gap: 0; align-items: start; }
+  .compare-col { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-md); border: 1px solid var(--border); padding: 32px; }
+  .compare-col h3 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+  .compare-col .compare-sub { font-size: 12px; color: var(--text-tertiary); margin-bottom: 24px; }
+  .compare-arrow-col { display: flex; align-items: center; justify-content: center; font-size: 20px; color: var(--text-tertiary); }
+  .compare-step { display: flex; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+  .compare-step:last-child { border-bottom: none; }
+  .compare-step .cn { width: 24px; height: 24px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+  .compare-step p { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+  .compare-step p strong { color: var(--text); }
+  .cn-red { background: var(--red-light); color: var(--red); }
+  .cn-green { background: var(--green-light); color: var(--green); }
+
+  /* === TABLE === */
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: var(--radius); box-shadow: var(--shadow-md); border: 1px solid var(--border); }
+  .table { width: 100%; border-collapse: collapse; min-width: 680px; }
+  .table th { background: var(--surface-hover); padding: 14px 18px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-tertiary); text-align: left; border-bottom: 1px solid var(--border); }
+  .table td { padding: 16px 18px; font-size: 13px; color: var(--text-secondary); line-height: 1.5; border-bottom: 1px solid var(--border); background: var(--surface); }
+  .table tr:last-child td { border-bottom: none; }
+  .table .row-highlight td { color: var(--accent); font-weight: 600; background: var(--accent-light); }
+  .table td:first-child { font-weight: 600; color: var(--text); }
+
+  /* === CONSTRAINT CARDS === */
+  .constraint-card { background: var(--surface); border-radius: var(--radius-sm); box-shadow: var(--shadow-sm); border: 1px solid var(--border); padding: 28px; }
+  .constraint-card .c-icon { font-size: 28px; margin-bottom: 14px; }
+  .constraint-card h3 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .constraint-card .c-source { font-size: 11px; font-weight: 600; margin-bottom: 12px; }
+  .constraint-card p { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+  .constraint-card .c-implication { margin-top: 14px; padding: 14px 16px; background: var(--surface-hover); border-radius: 10px; font-size: 12px; color: var(--text-secondary); line-height: 1.55; }
+  .constraint-card .c-implication strong { color: var(--accent); }
+
+  /* === CALLOUT === */
+  .callout { margin-top: 40px; padding: 24px 28px; background: var(--accent-light); border-radius: var(--radius-sm); font-size: 13px; color: var(--text-secondary); line-height: 1.65; }
+  .callout strong { color: var(--accent); }
+
+  /* === RESPONSIVE === */
+  @media (max-width: 900px) {
+    .header h1 { font-size: 30px; }
+    .header .subtitle { font-size: 15px; }
+    .flow-5, .flow-4 { grid-template-columns: 1fr; }
+    .flow-3 { grid-template-columns: 1fr; }
+    .grid-3 { grid-template-columns: 1fr; }
+    .grid-2 { grid-template-columns: 1fr; }
+    .compare-wrap { grid-template-columns: 1fr; gap: 0; }
+    .compare-arrow-col { padding: 16px 0; transform: rotate(90deg); }
+    .table-wrap { margin: 0 -24px; border-radius: 0; border-left: none; border-right: none; }
+  }
+
   @media (max-width: 520px) {
-    .header { padding: 20px 16px 12px; }
-    .header h1 { font-size: 18px; }
-    .header p { font-size: 12px; }
-    .tabs { padding: 0 16px; gap: 4px; margin-bottom: 20px; }
-    .tab { padding: 7px 10px; font-size: 11px; border-radius: 6px 6px 0 0; }
-    .view { padding: 0 16px 30px; }
-
-    .stage { padding: 16px; }
-    .stage h3 { font-size: 14px; }
-    .stage p { font-size: 11px; }
-
-    .dimension { padding: 20px; }
-    .dimension h3 { font-size: 13px; }
-
-    .state-card { padding: 16px; }
-    .state-card h4 { font-size: 13px; }
-
-    .compare-col { padding: 20px; }
-    .compare-col h3 { font-size: 14px; }
-    .compare-text { font-size: 11px; }
-
-    .map-card { padding: 16px; }
-    .map-card h4 { font-size: 13px; }
-
-    .constraint { padding: 18px; }
-    .constraint h3 { font-size: 13px; }
-    .constraint p { font-size: 11px; }
-
-    .footer-note { padding: 16px; font-size: 11px; margin-top: 24px; }
-
-    .scenario { padding: 16px; }
-    .scenario h4 { font-size: 12px; }
-    .scenario-step { font-size: 10px; }
-
-    .sys-block { padding: 16px; }
-    .sys-block h4 { font-size: 12px; }
-    .sys-block p { font-size: 10px; }
-
-    .dim-item { padding: 6px 10px; font-size: 10px; }
-    .dim-item .status { font-size: 9px; padding: 2px 6px; }
+    .header { padding: 40px 20px 0; }
+    .header h1 { font-size: 24px; }
+    .header .subtitle { font-size: 14px; }
+    .nav-item { padding: 12px 14px; font-size: 12px; }
+    .content { padding: 0 20px 60px; }
+    .view { padding-top: 32px; }
+    .view-intro h2 { font-size: 22px; }
+    .card { padding: 24px; }
+    .flow-item { padding: 20px 16px; }
+    .dim-card { padding: 22px; }
+    .compare-col { padding: 24px; }
+    .scenario-card { padding: 20px; }
+    .constraint-card { padding: 22px; }
+    .callout { padding: 20px; }
   }
 </style>
 </head>
 <body>
 
 <div class="header">
-  <h1>Apollo Deal Tracking — Work Package Framework</h1>
-  <p>Conquer AI internal thinking — mapping the work package concept to Apollo's deal diligence process</p>
-  <div class="version">v2 — Reconciled with Tom's Define / Retrieve / Orchestrate + design-level constraints</div>
+  <h1>How Apollo's Deal Tracker Works</h1>
+  <div class="subtitle">A framework for understanding how private equity deal diligence moves from an opportunity to an investment decision — and how software can make that journey faster.</div>
+  <div class="meta">Conquer AI &middot; Internal Product Thinking &middot; March 2026</div>
 </div>
 
-<div class="tabs">
-  <div class="tab active" onclick="showView('twolayer')">Two-Layer Model</div>
-  <div class="tab" onclick="showView('dimensions')">Three Dimensions</div>
-  <div class="tab" onclick="showView('golden')">Golden Answers</div>
-  <div class="tab" onclick="showView('comparison')">Current &rarr; Future</div>
-  <div class="tab" onclick="showView('mapping')">Product Mapping</div>
-  <div class="tab" onclick="showView('constraints')">Design Constraints</div>
-  <div class="tab" onclick="showView('crossclient')">Cross-Client</div>
+<div class="nav-wrap">
+  <div class="nav">
+    <div class="nav-item active" onclick="showView('overview')">The Problem</div>
+    <div class="nav-item" onclick="showView('twolayer')">How It Works</div>
+    <div class="nav-item" onclick="showView('dimensions')">Three Dimensions</div>
+    <div class="nav-item" onclick="showView('golden')">Answer Lifecycle</div>
+    <div class="nav-item" onclick="showView('comparison')">Before &amp; After</div>
+    <div class="nav-item" onclick="showView('mapping')">Product Architecture</div>
+    <div class="nav-item" onclick="showView('constraints')">Design Boundaries</div>
+    <div class="nav-item" onclick="showView('crossclient')">The Pattern</div>
+  </div>
 </div>
 
-<!-- VIEW 1: TWO-LAYER MODEL -->
-<div class="view active" id="twolayer">
-  <div class="two-layer">
+<div class="content">
 
-    <div class="layer-label deal">Layer 1 — The Deal Journey (what happens to the work package)</div>
-    <div class="lifecycle">
-      <div class="stage">
-        <div class="stage-number">Stage 1</div>
-        <h3>Trigger</h3>
-        <p>Deal moves past screening into meaningful diligence. A senior team member decides this opportunity is worth investigating.</p>
-        <span class="stage-tag tag-human">Human decision</span>
-        <div class="arrow">&rarr;</div>
-      </div>
-      <div class="stage">
-        <div class="stage-number">Stage 2</div>
-        <h3>Instantiate</h3>
-        <p>Work package is created. Template of gating items, workstreams, and questions is generated. Associate uploads initial documents.</p>
-        <span class="stage-tag tag-both">Human + System</span>
-        <div class="arrow">&rarr;</div>
-      </div>
-      <div class="stage">
-        <div class="stage-number">Stage 3</div>
-        <h3>Enrich</h3>
-        <p>Documents flow in from Box. AI extracts findings and matches to questions. Associates review, confirm, and chase gaps. Iterative — not linear.</p>
-        <span class="stage-tag tag-system">System-powered</span>
-        <div class="arrow">&rarr;</div>
-      </div>
-      <div class="stage">
-        <div class="stage-number">Stage 4</div>
-        <h3>Orchestrate</h3>
-        <p>Dashboard surfaces progress. Flags what's stale, what's outstanding, who's responsible. Morning briefing shows what changed overnight.</p>
-        <span class="stage-tag tag-system">System-powered</span>
-        <div class="arrow">&rarr;</div>
-      </div>
-      <div class="stage">
-        <div class="stage-number">Stage 5</div>
-        <h3>Decide</h3>
-        <p>Work package is decision-ready. Principal reviews completeness. Partner makes go/no-go investment decision.</p>
-        <span class="stage-tag tag-human">Human decision</span>
-      </div>
+<!-- VIEW 0: THE PROBLEM -->
+<div class="view active" id="overview">
+  <div class="view-intro">
+    <h2>The problem we're solving</h2>
+    <p>Apollo is a private equity firm. Before they invest hundreds of millions of dollars in a company, a team of analysts spends 2-3 weeks doing intensive due diligence — reading hundreds of documents, answering critical questions, and coordinating with dozens of external advisors. Today, all of this is managed in a single Excel spreadsheet emailed between team members. The spreadsheet has no connection to the documents that contain the answers.</p>
+  </div>
+
+  <div class="grid-3" style="margin-bottom: 32px;">
+    <div class="card card-sm">
+      <h3 style="font-size: 40px; font-weight: 700; color: var(--red); margin-bottom: 8px;">14</h3>
+      <p style="font-size: 14px; font-weight: 600; margin-bottom: 4px;">Critical questions</p>
+      <p style="font-size: 13px; color: var(--text-secondary);">Seven gating items that can kill a deal, plus seven additional questions that shape the investment thesis. Each needs a definitive, evidence-backed answer.</p>
     </div>
-
-    <div class="bridge-row">
-      <div class="bridge bridge-active"><span>&darr;</span></div>
-      <div class="bridge bridge-active"><span>&darr;</span></div>
-      <div class="bridge bridge-active"><span>&darr;</span></div>
-      <div class="bridge bridge-active"><span>&darr;</span></div>
-      <div class="bridge"><span></span></div>
+    <div class="card card-sm">
+      <h3 style="font-size: 40px; font-weight: 700; color: var(--accent); margin-bottom: 8px;">10+</h3>
+      <p style="font-size: 14px; font-weight: 600; margin-bottom: 4px;">External workstreams</p>
+      <p style="font-size: 13px; color: var(--text-secondary);">Consultants (Bain), financial auditors (PwC), M&A advisors, banks, operating partners — each producing reports and findings on different timelines.</p>
     </div>
-
-    <div class="layer-label system">Layer 2 — The System's Job (Tom's three AI capabilities)</div>
-    <div class="system-layer">
-      <div class="sys-block sys-wide">
-        <div class="span-label">Covers Trigger + Instantiate</div>
-        <h4>Define</h4>
-        <p>Auto-generate DD questions from deal type. Map to standardised templates (~90% standard, ~10% deal-specific). Create workstreams. Set up Box email address. Process initial document upload.</p>
-      </div>
-      <div class="sys-block sys-single">
-        <div class="span-label">Powers Enrich</div>
-        <h4>Retrieve</h4>
-        <p>Read Box documents via daily batch. Extract findings. Match evidence to outstanding questions. Surface with confidence scores and source links. Flag conflicts with confirmed answers.</p>
-      </div>
-      <div class="sys-block sys-single">
-        <div class="span-label">Powers Orchestrate</div>
-        <h4>Orchestrate</h4>
-        <p>Surface what's answered vs outstanding. Generate EOD/EOW summaries. Show what changed since last login. Flag stale items. Prioritise next actions for associates.</p>
-      </div>
-      <div class="sys-block sys-none">
-        <p>No AI equivalent.<br>Human outcome.</p>
-      </div>
+    <div class="card card-sm">
+      <h3 style="font-size: 40px; font-weight: 700; color: var(--orange); margin-bottom: 8px;">2-3</h3>
+      <p style="font-size: 14px; font-weight: 600; margin-bottom: 4px;">Weeks to decide</p>
+      <p style="font-size: 13px; color: var(--text-secondary);">From the moment a deal enters diligence, the team has 2-3 weeks to reach a go or no-go investment decision. Every day of admin overhead is a day lost from analysis.</p>
     </div>
   </div>
 
-  <div class="footer-note">
-    <strong>Why two layers:</strong> Tom's framework (Define, Retrieve, Orchestrate) tells you what to build. The deal journey (Trigger through Decide) tells you why it matters. Decide sits outside the system's scope — the product gets the work package to a state where the decision is possible, it doesn't make the decision. This is explicit in Apollo's requirements: "Won't Have — fully autonomous DD decision-making."
+  <div class="card">
+    <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 16px;">The associate's daily reality</h3>
+    <p style="font-size: 14px; color: var(--text-secondary); line-height: 1.65; margin-bottom: 16px;">The junior analyst (called an "associate") is the person who does most of the work. Their job is to be the glue between three things: the questions the deal team needs answered, the external advisors doing the research, and the documents that contain the actual evidence.</p>
+    <p style="font-size: 14px; color: var(--text-secondary); line-height: 1.65; margin-bottom: 16px;">Today, this means: open a document storage system called Box, find the latest report from PwC, read it, figure out which of the 14 questions it helps answer, switch to Excel, type in the finding, update the status, save the file with today's date, and email it to the team. Then repeat — for every document, every day, across every active deal.</p>
+    <p style="font-size: 14px; color: var(--text-secondary); line-height: 1.65;">The product we're building eliminates this manual loop. AI reads the documents, matches findings to questions, and shows everyone the same live dashboard. The associate's time shifts from admin to analysis.</p>
+  </div>
+</div>
+
+<!-- VIEW 1: TWO-LAYER MODEL -->
+<div class="view" id="twolayer">
+  <div class="view-intro">
+    <h2>Two layers of the system</h2>
+    <p>The framework has two layers. The top layer describes what happens to the deal as it moves through diligence — the "deal journey." The bottom layer describes what the software does at each stage — the "system capabilities." They map to each other, but they're different lenses: one is about the business process, the other is about the technology.</p>
+  </div>
+
+  <p style="font-size: 12px; font-weight: 600; color: var(--purple); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">The Deal Journey — what happens to the work package</p>
+  <div class="flow flow-5" style="margin-bottom: 16px;">
+    <div class="flow-item">
+      <div class="step-num">Stage 1</div>
+      <h3>Trigger</h3>
+      <p>A senior partner decides an opportunity is worth investigating. The deal moves from initial screening into formal due diligence.</p>
+      <span class="badge badge-purple">Human decision</span>
+    </div>
+    <div class="flow-item">
+      <div class="step-num">Stage 2</div>
+      <h3>Instantiate</h3>
+      <p>The system creates a new "work package" — a template of questions, workstreams, and a linked document folder. The associate uploads the first batch of documents.</p>
+      <span class="badge badge-green">Human + System</span>
+    </div>
+    <div class="flow-item">
+      <div class="step-num">Stage 3</div>
+      <h3>Enrich</h3>
+      <p>Documents flow in daily from external advisors. AI reads them overnight and matches findings to questions. Associates review AI suggestions and confirm answers. This stage is iterative, not linear — new evidence can reopen settled questions.</p>
+      <span class="badge badge-blue">System-powered</span>
+    </div>
+    <div class="flow-item">
+      <div class="step-num">Stage 4</div>
+      <h3>Orchestrate</h3>
+      <p>The dashboard shows what's been answered, what's still missing, and who should be chased. Each morning, the team sees a briefing of what changed overnight — new findings, challenged answers, stale items.</p>
+      <span class="badge badge-blue">System-powered</span>
+    </div>
+    <div class="flow-item">
+      <div class="step-num">Stage 5</div>
+      <h3>Decide</h3>
+      <p>When all critical questions have confirmed answers, the deal is "decision-ready." A senior principal reviews completeness, then the partner makes the final go or no-go investment call.</p>
+      <span class="badge badge-purple">Human decision</span>
+    </div>
+  </div>
+
+  <div class="flow-connector"><span>powered by</span></div>
+
+  <p style="font-size: 12px; font-weight: 600; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">The System's Job — three AI capabilities</p>
+  <div class="flow flow-4">
+    <div class="flow-item" style="grid-column: span 1;">
+      <div class="step-num" style="color: var(--accent);">Covers Stages 1 + 2</div>
+      <h3 style="color: var(--accent);">Define</h3>
+      <p>When a deal is created, the system auto-generates a set of due diligence questions based on the deal type. About 90% of questions are standard across all deals; 10% are customised. It also sets up workstream categories and a dedicated email address for document uploads.</p>
+    </div>
+    <div class="flow-item">
+      <div class="step-num" style="color: var(--accent);">Powers Stage 3</div>
+      <h3 style="color: var(--accent);">Retrieve</h3>
+      <p>Every night, the system processes new documents that have been uploaded to the deal's storage folder. It reads each document, extracts relevant data points, and matches them against the outstanding questions — surfacing findings with confidence scores and links back to the original source.</p>
+    </div>
+    <div class="flow-item">
+      <div class="step-num" style="color: var(--accent);">Powers Stage 4</div>
+      <h3 style="color: var(--accent);">Orchestrate</h3>
+      <p>The system tracks which questions have been answered, which are still open, and which might need revisiting. It generates end-of-day and end-of-week summaries, flags items that have gone stale, and shows what changed since the last time each user logged in.</p>
+    </div>
+    <div class="flow-item" style="background: var(--surface-hover); border-style: dashed;">
+      <div class="step-num" style="color: var(--text-tertiary);">Stage 5</div>
+      <h3 style="color: var(--text-tertiary);">No AI equivalent</h3>
+      <p>The decision to invest is a human judgment call. The system's job is to get the work package to a state where that decision can be made confidently — not to make it. Apollo's requirements explicitly state: "the system will not autonomously complete due diligence."</p>
+    </div>
+  </div>
+
+  <div class="callout">
+    <strong>Why two layers matter:</strong> The deal journey (Trigger → Decide) tells you why each capability exists and who benefits from it. The system capabilities (Define, Retrieve, Orchestrate) tell you what needs to be built and how the technology works. When discussing the product with Apollo's business stakeholders, use the deal journey. When briefing the engineering team or the designer, use the system capabilities.
   </div>
 </div>
 
 <!-- VIEW 2: THREE DIMENSIONS -->
 <div class="view" id="dimensions">
-  <div class="dimensions">
-    <div class="dimension dim-vertical">
-      <div class="dimension-icon">&darr;</div>
-      <h3>Vertical — What needs answering</h3>
-      <div class="subtitle">Maps to: Overview tab &rarr; Module 2 (Diligence Tracker)</div>
-      <p>The gating items and questions that define what the deal team needs to know. ~90% templated across deals. Generated by Define.</p>
-      <div class="dim-items">
-        <div class="dim-item">Bank Partnership <span class="status status-gating">Gating</span></div>
-        <div class="dim-item">Pricing <span class="status status-gating">Gating</span></div>
-        <div class="dim-item">Cost Structure <span class="status status-gating">Gating</span></div>
-        <div class="dim-item">Competition <span class="status status-gating">Gating</span></div>
-        <div class="dim-item">Tech Debt <span class="status status-gating">Gating</span></div>
-        <div class="dim-item">Exit <span class="status status-gating">Gating</span></div>
-        <div class="dim-item">Separation <span class="status status-gating">Gating</span></div>
-        <div class="dim-item">Base Business <span class="status status-question">Question</span></div>
-        <div class="dim-item">Macro <span class="status status-question">Question</span></div>
-        <div class="dim-item">Model <span class="status status-question">Question</span></div>
-        <div class="dim-item">Financing <span class="status status-question">Question</span></div>
-        <div class="dim-item">Management <span class="status status-question">Question</span></div>
+  <div class="view-intro">
+    <h2>Three dimensions of a deal</h2>
+    <p>Every deal in diligence has three dimensions that need to be tracked simultaneously. Today, Apollo manages these across three tabs in a single Excel spreadsheet. The product replaces this with a connected system where changes in one dimension automatically reflect in the others.</p>
+  </div>
+
+  <div class="grid-3">
+    <div class="dim-card">
+      <div class="dim-icon" style="background: var(--accent-light); color: var(--accent);">&darr;</div>
+      <h3>What needs answering</h3>
+      <div class="dim-source" style="color: var(--accent);">Currently lives in: the "Overview" Excel tab</div>
+      <p>The critical questions the deal team must answer before making an investment decision. Seven are "gating items" — if the answer is bad, the deal is dead. Seven more shape the investment thesis but aren't deal-breakers on their own. About 90% of these questions are the same across every deal Apollo does.</p>
+      <div class="dim-list">
+        <div class="dim-list-item">Bank Partnership <span class="tag tag-red">Gating</span></div>
+        <div class="dim-list-item">Pricing Structure <span class="tag tag-red">Gating</span></div>
+        <div class="dim-list-item">Cost Structure <span class="tag tag-red">Gating</span></div>
+        <div class="dim-list-item">Competition <span class="tag tag-red">Gating</span></div>
+        <div class="dim-list-item">Tech Debt <span class="tag tag-red">Gating</span></div>
+        <div class="dim-list-item">Exit Strategy <span class="tag tag-red">Gating</span></div>
+        <div class="dim-list-item">Separation Requirements <span class="tag tag-red">Gating</span></div>
+        <div class="dim-list-item">Base Business <span class="tag tag-blue">Question</span></div>
+        <div class="dim-list-item">Macro Conditions <span class="tag tag-blue">Question</span></div>
+        <div class="dim-list-item">Financial Model <span class="tag tag-blue">Question</span></div>
+        <div class="dim-list-item">Financing <span class="tag tag-blue">Question</span></div>
+        <div class="dim-list-item">Management Assessment <span class="tag tag-blue">Question</span></div>
       </div>
     </div>
 
-    <div class="dimension dim-horizontal">
-      <div class="dimension-icon">&harr;</div>
-      <h3>Horizontal — Who's doing the work</h3>
-      <div class="subtitle">Maps to: Workstream Tracker tab &rarr; Module 1 (Project Tracker)</div>
-      <p>The operational workstreams — external advisors, internal teams, banks. Tracked by Orchestrate.</p>
-      <div class="dim-items">
-        <div class="dim-item">Leadership Materials <span class="status status-active">In Process</span></div>
-        <div class="dim-item">Bain (Consultant) <span class="status status-active">In Process</span></div>
-        <div class="dim-item">PwC (Financial DD) <span class="status status-active">In Process</span></div>
-        <div class="dim-item">APPS <span class="status status-active">In Process</span></div>
-        <div class="dim-item">M&A Advisors <span class="status status-active">In Process</span></div>
-        <div class="dim-item">Financing Sources <span class="status status-active">In Process</span></div>
-        <div class="dim-item">Other Banks <span class="status status-active">In Process</span></div>
-        <div class="dim-item">Motive Partners <span class="status status-active">In Process</span></div>
-        <div class="dim-item">Operating Advisors <span class="status status-active">In Process</span></div>
-        <div class="dim-item">Data Requests <span class="status status-active">In Process</span></div>
+    <div class="dim-card">
+      <div class="dim-icon" style="background: var(--green-light); color: var(--green);">&harr;</div>
+      <h3>Who's doing the work</h3>
+      <div class="dim-source" style="color: var(--green);">Currently lives in: the "Workstream Tracker" Excel tab</div>
+      <p>The people and organisations actively working on the deal — both internal team members and external advisors. Each workstream has its own tasks, timelines, and deliverables. A typical deal has 10+ parallel workstreams all running at once, each producing documents the associate needs to process.</p>
+      <div class="dim-list">
+        <div class="dim-list-item">Leadership Materials <span class="tag tag-green">Active</span></div>
+        <div class="dim-list-item">Bain (Strategy Consultant) <span class="tag tag-green">Active</span></div>
+        <div class="dim-list-item">PwC (Financial Audit) <span class="tag tag-green">Active</span></div>
+        <div class="dim-list-item">APPS <span class="tag tag-green">Active</span></div>
+        <div class="dim-list-item">M&amp;A Advisors <span class="tag tag-green">Active</span></div>
+        <div class="dim-list-item">Financing Sources <span class="tag tag-green">Active</span></div>
+        <div class="dim-list-item">Other Banks <span class="tag tag-green">Active</span></div>
+        <div class="dim-list-item">Motive Partners <span class="tag tag-green">Active</span></div>
+        <div class="dim-list-item">Operating Advisors <span class="tag tag-green">Active</span></div>
+        <div class="dim-list-item">Data Requests <span class="tag tag-green">Active</span></div>
       </div>
     </div>
 
-    <div class="dimension dim-depth">
-      <div class="dimension-icon">&diams;</div>
-      <h3>Depth — The evidence</h3>
-      <div class="subtitle">Maps to: Box documents &rarr; Powered by Retrieve</div>
-      <p>The actual documents in Box that contain evidence. The Granular Workplan tab breaks vertical questions into sub-questions — depth is where those sub-questions get answered by real documents.</p>
-      <div class="dim-items">
-        <div class="dim-item">Revenue share agreements <span class="status status-source">Document</span></div>
-        <div class="dim-item">SG&amp;A trend analysis <span class="status status-source">Document</span></div>
-        <div class="dim-item">Cost structure vs. peers <span class="status status-source">Document</span></div>
-        <div class="dim-item">Fixed vs. variable breakdown <span class="status status-source">Document</span></div>
-        <div class="dim-item">Management interviews <span class="status status-source">Finding</span></div>
-        <div class="dim-item">Market study reports <span class="status status-source">Document</span></div>
-        <div class="dim-item">Customer analysis <span class="status status-source">Document</span></div>
-        <div class="dim-item">Financial models <span class="status status-source">Document</span></div>
-        <div class="dim-item">Call notes &amp; memos <span class="status status-source">Finding</span></div>
+    <div class="dim-card">
+      <div class="dim-icon" style="background: var(--orange-light); color: var(--orange);">&diams;</div>
+      <h3>The evidence</h3>
+      <div class="dim-source" style="color: var(--orange);">Currently lives in: Box (document storage) — disconnected from the tracker</div>
+      <p>The actual documents that contain the answers: financial reports, market studies, management presentations, advisor memos, call notes. Today, these sit in Box with no link to the questions they help answer. A third Excel tab ("Granular Workplan") breaks each question into sub-questions with assigned owners — but still has no connection to the documents themselves.</p>
+      <div class="dim-list">
+        <div class="dim-list-item">Revenue share agreements <span class="tag tag-orange">Document</span></div>
+        <div class="dim-list-item">SG&amp;A trend analysis <span class="tag tag-orange">Document</span></div>
+        <div class="dim-list-item">Cost structure vs. peers <span class="tag tag-orange">Document</span></div>
+        <div class="dim-list-item">Management interviews <span class="tag tag-orange">Finding</span></div>
+        <div class="dim-list-item">Market study reports <span class="tag tag-orange">Document</span></div>
+        <div class="dim-list-item">Customer analysis <span class="tag tag-orange">Document</span></div>
+        <div class="dim-list-item">Financial models <span class="tag tag-orange">Document</span></div>
+        <div class="dim-list-item">Call notes &amp; memos <span class="tag tag-orange">Finding</span></div>
       </div>
     </div>
   </div>
 
-  <div class="footer-note">
-    <strong>Clarification from v1:</strong> The Granular Workplan tab is a drill-down of the Vertical dimension — it breaks gating items into sub-questions with owners. Depth is distinct: it's the actual evidence (Box documents, call notes, findings) that answers those sub-questions. The product's core job is automating the connection: Retrieve reads depth-layer documents and matches findings back to vertical-layer questions, while Orchestrate tracks horizontal-layer progress.
+  <div class="callout">
+    <strong>The core product insight:</strong> Today, the associate is the human glue between these three dimensions. They read a document (evidence), figure out which question it answers (what needs answering), and update the relevant workstream's status (who's doing the work). The product automates this connection: AI reads the evidence, matches it to questions, and updates workstream progress automatically.
   </div>
 </div>
 
 <!-- VIEW 3: GOLDEN ANSWER STATES -->
 <div class="view" id="golden">
-  <div class="answer-states">
-    <div style="margin-bottom: 20px;">
-      <h3 style="font-size: 16px; color: #fff; margin-bottom: 6px;">Question Answer States</h3>
-      <p style="font-size: 12px; color: #7a8199; line-height: 1.5;">Each gating item / DD question moves through four possible states. Enrichment is not linear — new evidence can challenge confirmed answers.</p>
-    </div>
+  <div class="view-intro">
+    <h2>How a question gets answered</h2>
+    <p>Each of the 14 due diligence questions moves through a lifecycle of states. This is not a simple open/closed model — because in the real world, new evidence can arrive that contradicts an answer the team already confirmed. The system needs to handle this gracefully without overwriting human decisions.</p>
+  </div>
 
-    <div class="state-flow">
-      <div class="state-card state-1">
-        <div class="state-dot dot-unanswered"></div>
-        <h4>Unanswered</h4>
-        <p>Question exists but no evidence has been matched to it yet. Generated at Instantiate by Define.</p>
-        <div class="arrow">&rarr;</div>
-      </div>
-      <div class="state-card state-2">
-        <div class="state-dot dot-suggested"></div>
-        <h4>AI-Suggested</h4>
-        <p>Retrieve found evidence in Box that may answer this question. Surfaced with confidence score and source link. Awaiting human review.</p>
-        <div class="arrow">&rarr;</div>
-      </div>
-      <div class="state-card state-3">
-        <div class="state-dot dot-confirmed"></div>
-        <h4>Confirmed</h4>
-        <p>Associate reviewed the AI suggestion and confirmed it as the "golden answer." This is the authoritative response. Locked by a human.</p>
-        <div class="arrow">&rarr;</div>
-      </div>
-      <div class="state-card state-4">
-        <div class="state-dot dot-challenged"></div>
-        <h4>Challenged</h4>
-        <p>New evidence found in a later batch conflicts with or updates the confirmed answer. Original answer preserved. New finding flagged for review.</p>
-      </div>
+  <div class="flow flow-4" style="margin-bottom: 40px;">
+    <div class="flow-item">
+      <div class="state-dot" style="background: var(--text-tertiary);"></div>
+      <h3 style="color: var(--text-tertiary);">Unanswered</h3>
+      <p>The question exists but nobody has provided an answer yet. It was auto-generated when the deal was created. This is the starting state for every question.</p>
     </div>
-
-    <div style="margin-bottom: 16px;">
-      <h3 style="font-size: 14px; color: #fff; margin-bottom: 6px;">Design Scenarios</h3>
+    <div class="flow-item">
+      <div class="state-dot" style="background: var(--accent);"></div>
+      <h3 style="color: var(--accent);">AI-Suggested</h3>
+      <p>The system found something in a document that might answer this question. It shows the relevant extract with a confidence score and a link to the original source. It's waiting for a human to review it.</p>
     </div>
-
-    <div class="scenario-grid">
-      <div class="scenario">
-        <span class="scenario-label happy">Happy Path</span>
-        <h4>New question gets answered</h4>
-        <div class="scenario-step"><div class="step-num">1</div><div>Deal created, 14 questions auto-generated (Unanswered)</div></div>
-        <div class="scenario-step"><div class="step-num">2</div><div>Overnight batch processes 3 new Box documents</div></div>
-        <div class="scenario-step"><div class="step-num">3</div><div>AI matches findings to 5 questions (AI-Suggested)</div></div>
-        <div class="scenario-step"><div class="step-num">4</div><div>Associate logs in, sees morning briefing: "5 new suggestions"</div></div>
-        <div class="scenario-step"><div class="step-num">5</div><div>Reviews each, confirms 4, rejects 1 (4 Confirmed, 1 back to Unanswered)</div></div>
-      </div>
-      <div class="scenario">
-        <span class="scenario-label conflict">Conflict Path</span>
-        <h4>New evidence challenges confirmed answer</h4>
-        <div class="scenario-step"><div class="step-num">1</div><div>"Cost Structure" confirmed last week based on management presentation</div></div>
-        <div class="scenario-step"><div class="step-num">2</div><div>PwC uploads new financial DD report to Box overnight</div></div>
-        <div class="scenario-step"><div class="step-num">3</div><div>AI extracts cost data that contradicts the confirmed answer</div></div>
-        <div class="scenario-step"><div class="step-num">4</div><div>Question moves to Challenged — original answer preserved, new finding flagged</div></div>
-        <div class="scenario-step"><div class="step-num">5</div><div>Associate reviews both, either updates the golden answer or dismisses the new finding</div></div>
-      </div>
-      <div class="scenario">
-        <span class="scenario-label happy">Additive Path</span>
-        <h4>New evidence strengthens confirmed answer</h4>
-        <div class="scenario-step"><div class="step-num">1</div><div>"Competition" confirmed based on Bain market study</div></div>
-        <div class="scenario-step"><div class="step-num">2</div><div>New industry report uploaded to Box</div></div>
-        <div class="scenario-step"><div class="step-num">3</div><div>AI finds supporting data — consistent with confirmed answer</div></div>
-        <div class="scenario-step"><div class="step-num">4</div><div>New source added to evidence chain, answer stays Confirmed</div></div>
-        <div class="scenario-step"><div class="step-num">5</div><div>Associate sees "1 new supporting source" — no action required</div></div>
-      </div>
-      <div class="scenario">
-        <span class="scenario-label conflict">Coverage Gap</span>
-        <h4>Question remains unanswered</h4>
-        <div class="scenario-step"><div class="step-num">1</div><div>"Tech Debt" has been Unanswered for 5 days</div></div>
-        <div class="scenario-step"><div class="step-num">2</div><div>No documents in Box contain relevant evidence</div></div>
-        <div class="scenario-step"><div class="step-num">3</div><div>Orchestrate flags it as stale — appears in morning briefing</div></div>
-        <div class="scenario-step"><div class="step-num">4</div><div>Associate sees which workstream should be providing this evidence</div></div>
-        <div class="scenario-step"><div class="step-num">5</div><div>Can chase the responsible advisor directly from the dashboard</div></div>
-      </div>
+    <div class="flow-item">
+      <div class="state-dot" style="background: var(--green);"></div>
+      <h3 style="color: var(--green);">Confirmed</h3>
+      <p>An associate reviewed the AI suggestion and marked it as the definitive answer — the "golden answer." This is now the authoritative response. Only a human can set this state.</p>
+    </div>
+    <div class="flow-item">
+      <div class="state-dot" style="background: var(--orange);"></div>
+      <h3 style="color: var(--orange);">Challenged</h3>
+      <p>A new document arrived that contains information conflicting with the confirmed answer. The original answer is preserved. The new finding is flagged for review. The associate decides whether to update or dismiss.</p>
     </div>
   </div>
 
-  <div class="footer-note">
-    <strong>The key design challenge:</strong> The Challenged state is what makes this product different from a simple tracker. It's the "golden answer problem" from the designer brief — AI must never silently overwrite a human-confirmed answer, but it must surface when new evidence contradicts one. The UI needs to make this feel informative, not alarming. Think "new data available" not "your answer is wrong."
+  <p style="font-size: 16px; font-weight: 700; margin-bottom: 16px;">How this plays out in practice</p>
+
+  <div class="grid-2">
+    <div class="scenario-card">
+      <div class="scenario-type" style="color: var(--green);">Typical scenario</div>
+      <h4>A new question gets answered</h4>
+      <div class="scenario-step"><div class="sn">1</div><div>A deal is created and 14 questions are automatically generated. All start as <strong>Unanswered</strong>.</div></div>
+      <div class="scenario-step"><div class="sn">2</div><div>Overnight, the system processes 3 new documents uploaded to the deal's Box folder by external advisors.</div></div>
+      <div class="scenario-step"><div class="sn">3</div><div>The AI matches relevant findings to 5 of the 14 questions. Those 5 move to <strong>AI-Suggested</strong>.</div></div>
+      <div class="scenario-step"><div class="sn">4</div><div>Next morning, the associate logs in and sees "5 new suggestions" in their morning briefing.</div></div>
+      <div class="scenario-step"><div class="sn">5</div><div>They review each one: confirm 4 as golden answers, reject 1 (it goes back to <strong>Unanswered</strong>).</div></div>
+    </div>
+    <div class="scenario-card">
+      <div class="scenario-type" style="color: var(--orange);">Conflict scenario</div>
+      <h4>New evidence contradicts a confirmed answer</h4>
+      <div class="scenario-step"><div class="sn">1</div><div>Last week, the associate confirmed the "Cost Structure" answer based on data from a management presentation.</div></div>
+      <div class="scenario-step"><div class="sn">2</div><div>Overnight, PwC uploads a new financial audit report to the deal's Box folder.</div></div>
+      <div class="scenario-step"><div class="sn">3</div><div>The AI finds cost data in the PwC report that contradicts what the management team presented.</div></div>
+      <div class="scenario-step"><div class="sn">4</div><div>The question moves to <strong>Challenged</strong>. The original confirmed answer is preserved — nothing is overwritten.</div></div>
+      <div class="scenario-step"><div class="sn">5</div><div>The associate reviews both sources, then either updates the golden answer or dismisses the new finding.</div></div>
+    </div>
+    <div class="scenario-card">
+      <div class="scenario-type" style="color: var(--green);">Supporting evidence</div>
+      <h4>New data strengthens an existing answer</h4>
+      <div class="scenario-step"><div class="sn">1</div><div>The "Competition" question was confirmed last week based on Bain's market study.</div></div>
+      <div class="scenario-step"><div class="sn">2</div><div>A new industry report is uploaded to Box with additional competitive data.</div></div>
+      <div class="scenario-step"><div class="sn">3</div><div>The AI recognises the new data is consistent with the confirmed answer — no contradiction.</div></div>
+      <div class="scenario-step"><div class="sn">4</div><div>The new source is added to the evidence chain. The answer stays <strong>Confirmed</strong>.</div></div>
+      <div class="scenario-step"><div class="sn">5</div><div>The associate sees "1 new supporting source" — helpful context, no action required.</div></div>
+    </div>
+    <div class="scenario-card">
+      <div class="scenario-type" style="color: var(--orange);">Coverage gap</div>
+      <h4>A question stays unanswered too long</h4>
+      <div class="scenario-step"><div class="sn">1</div><div>"Tech Debt" has been <strong>Unanswered</strong> for 5 days. No documents in Box contain relevant evidence.</div></div>
+      <div class="scenario-step"><div class="sn">2</div><div>The system flags it as stale — it appears prominently in the morning briefing.</div></div>
+      <div class="scenario-step"><div class="sn">3</div><div>The dashboard shows which workstream should be providing this information (e.g., "Technology advisor — no deliverable received").</div></div>
+      <div class="scenario-step"><div class="sn">4</div><div>The associate can see who needs to be chased and can escalate directly from the dashboard.</div></div>
+      <div class="scenario-step"><div class="sn">5</div><div>Once the advisor submits their report, the system processes it in the next overnight batch.</div></div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <strong>The key design principle:</strong> The system must never silently overwrite a human-confirmed answer. But it must surface when new evidence contradicts one. The UI should frame this as "new data is available for your review" — not "your answer was wrong." The associate stays in control at every step.
   </div>
 </div>
 
-<!-- VIEW 4: CURRENT vs FUTURE -->
+<!-- VIEW 4: BEFORE & AFTER -->
 <div class="view" id="comparison">
-  <div class="comparison">
-    <div class="compare-col current">
-      <h3>Current State</h3>
-      <div class="compare-sub">Manual, fragmented, error-prone</div>
+  <div class="view-intro">
+    <h2>Before and after</h2>
+    <p>A side-by-side comparison of how the same work gets done today versus with the new system.</p>
+  </div>
 
-      <div class="compare-row">
-        <div class="compare-num">1</div>
-        <div class="compare-text"><strong>Deal enters diligence</strong> — someone creates a copy of the Excel template and emails it to the deal team</div>
-      </div>
-      <div class="compare-row">
-        <div class="compare-num">2</div>
-        <div class="compare-text"><strong>Associate opens Box</strong> — manually browses folders looking for relevant documents uploaded by advisors</div>
-      </div>
-      <div class="compare-row">
-        <div class="compare-num">3</div>
-        <div class="compare-text"><strong>Reads each document</strong> — scans through PDFs and reports to find data points that answer gating items</div>
-      </div>
-      <div class="compare-row">
-        <div class="compare-num">4</div>
-        <div class="compare-text"><strong>Updates the spreadsheet</strong> — manually types findings into the tracker, updates statuses, adds notes</div>
-      </div>
-      <div class="compare-row">
-        <div class="compare-num">5</div>
-        <div class="compare-text"><strong>Emails the latest version</strong> — sends updated tracker to the team. Version control via filename dates</div>
-      </div>
-      <div class="compare-row">
-        <div class="compare-num">6</div>
-        <div class="compare-text"><strong>Chases missing info</strong> — manually tracks what's outstanding, sends follow-up emails, no automated reminders</div>
-      </div>
-      <div class="compare-row">
-        <div class="compare-num">7</div>
-        <div class="compare-text"><strong>Principal asks for status</strong> — associate manually compiles a summary. No real-time visibility</div>
-      </div>
+  <div class="compare-wrap">
+    <div class="compare-col">
+      <h3 style="color: var(--red);">Today</h3>
+      <div class="compare-sub">Manual, fragmented, version-controlled by email</div>
+      <div class="compare-step"><div class="cn cn-red">1</div><p><strong>Deal enters diligence</strong> — someone copies the Excel template and emails it to the deal team. "Project X Tracker v1.xlsx"</p></div>
+      <div class="compare-step"><div class="cn cn-red">2</div><p><strong>Associate opens Box</strong> — manually browses folder after folder looking for new documents uploaded by advisors</p></div>
+      <div class="compare-step"><div class="cn cn-red">3</div><p><strong>Reads each document</strong> — scans through PDFs and reports trying to find data points that answer one of the 14 questions</p></div>
+      <div class="compare-step"><div class="cn cn-red">4</div><p><strong>Updates the spreadsheet</strong> — types findings into the correct cells, updates statuses, adds notes. Saves as "Project X Tracker v7 FINAL (2).xlsx"</p></div>
+      <div class="compare-step"><div class="cn cn-red">5</div><p><strong>Emails the latest version</strong> — sends the updated file to the team. Nobody is sure which version is current</p></div>
+      <div class="compare-step"><div class="cn cn-red">6</div><p><strong>Chases missing info</strong> — mentally tracks what's outstanding, sends individual follow-up emails. No automated way to know what's stale</p></div>
+      <div class="compare-step"><div class="cn cn-red">7</div><p><strong>Principal asks for a status update</strong> — the associate manually compiles a summary from the spreadsheet. There is no dashboard or overview</p></div>
     </div>
 
-    <div class="compare-arrow">&rarr;</div>
+    <div class="compare-arrow-col">&rarr;</div>
 
-    <div class="compare-col future">
-      <h3>Work Package State</h3>
-      <div class="compare-sub">Automated enrichment, daily batch, shared dashboard</div>
-
-      <div class="compare-row">
-        <div class="compare-num">1</div>
-        <div class="compare-text"><strong>Deal enters diligence</strong> — system auto-creates work package with templated questions and workstreams. Associate uploads initial docs</div>
-      </div>
-      <div class="compare-row">
-        <div class="compare-num">2</div>
-        <div class="compare-text"><strong>Box is connected</strong> — deal gets a dedicated email address. Documents forwarded there are ingested into the deal folder</div>
-      </div>
-      <div class="compare-row">
-        <div class="compare-num">3</div>
-        <div class="compare-text"><strong>AI reads documents overnight</strong> — daily batch extracts findings and matches them against outstanding questions</div>
-      </div>
-      <div class="compare-row">
-        <div class="compare-num">4</div>
-        <div class="compare-text"><strong>Morning briefing</strong> — associate logs in, sees what changed overnight: new suggestions, challenged answers, stale items</div>
-      </div>
-      <div class="compare-row">
-        <div class="compare-num">5</div>
-        <div class="compare-text"><strong>Single source of truth</strong> — everyone sees the same dashboard. No version control issues. Collaboration built in</div>
-      </div>
-      <div class="compare-row">
-        <div class="compare-num">6</div>
-        <div class="compare-text"><strong>Automated orchestration</strong> — system flags outstanding items, shows what's stale, surfaces who should be chased</div>
-      </div>
-      <div class="compare-row">
-        <div class="compare-num">7</div>
-        <div class="compare-text"><strong>Principal opens dashboard</strong> — sees AI-generated summary, progress by workstream, can drill into any gating item</div>
-      </div>
+    <div class="compare-col">
+      <h3 style="color: var(--green);">With the product</h3>
+      <div class="compare-sub">Automated enrichment, daily batch processing, shared dashboard</div>
+      <div class="compare-step"><div class="cn cn-green">1</div><p><strong>Deal enters diligence</strong> — the system auto-creates a work package with pre-populated questions and workstreams. The associate uploads the first batch of documents</p></div>
+      <div class="compare-step"><div class="cn cn-green">2</div><p><strong>Box is connected</strong> — the deal gets a dedicated email address. Any document forwarded to that address is automatically ingested into the deal's folder</p></div>
+      <div class="compare-step"><div class="cn cn-green">3</div><p><strong>AI reads documents overnight</strong> — a daily batch process extracts findings from new documents and matches them against the outstanding questions</p></div>
+      <div class="compare-step"><div class="cn cn-green">4</div><p><strong>Morning briefing</strong> — the associate logs in and sees exactly what changed overnight: new AI suggestions, challenged answers, and items that have gone stale</p></div>
+      <div class="compare-step"><div class="cn cn-green">5</div><p><strong>Single source of truth</strong> — every team member sees the same live dashboard. No version confusion. Collaboration is built in</p></div>
+      <div class="compare-step"><div class="cn cn-green">6</div><p><strong>Automated orchestration</strong> — the system flags outstanding items, shows what's been waiting too long, and surfaces which advisor should be chased</p></div>
+      <div class="compare-step"><div class="cn cn-green">7</div><p><strong>Principal opens the dashboard</strong> — sees an AI-generated summary, progress by workstream, and can drill into any gating item to see the evidence</p></div>
     </div>
   </div>
 </div>
 
-<!-- VIEW 5: PRODUCT MAPPING -->
+<!-- VIEW 5: PRODUCT ARCHITECTURE -->
 <div class="view" id="mapping">
-  <div class="mapping">
-    <div class="map-section">
-      <div class="map-label excel">Apollo's Current Excel Tracker</div>
-      <div class="map-cards">
-        <div class="map-card excel-card">
-          <h4>Tab 1: Overview</h4>
-          <p>Deal summary, objective, 7 key gating items, 7 other questions. The "what do we need to know" layer.</p>
-        </div>
-        <div class="map-card excel-card">
-          <h4>Tab 2: Workstream Tracker</h4>
-          <p>Operational tasks — Bain, PwC, banks, advisors. Status, timing, detail notes. The "who's doing what" layer.</p>
-        </div>
-        <div class="map-card excel-card">
-          <h4>Tab 3: Granular Workplan</h4>
-          <p>Sub-questions per gating item, responsible parties. Drill-down of the Overview tab — not a separate layer but the detail underneath it.</p>
-        </div>
-      </div>
-    </div>
+  <div class="view-intro">
+    <h2>From spreadsheet to product</h2>
+    <p>Three layers of translation: what Apollo uses today, what we're building, and how our framework ties it together.</p>
+  </div>
 
-    <div class="connector">
-      <div class="connector-line">maps to</div>
+  <p style="font-size: 12px; font-weight: 600; color: var(--red); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">What exists today — Apollo's Excel tracker</p>
+  <div class="grid-3" style="margin-bottom: 8px;">
+    <div class="card card-sm" style="border-left: 3px solid var(--red);">
+      <h3 style="font-size: 15px; font-weight: 700;">Tab 1: Overview</h3>
+      <p style="font-size: 13px; color: var(--text-secondary); margin-top: 6px;">The deal's objective, 7 gating items, and 7 additional questions. This is the "what do we need to know?" layer — the requirements definition for the entire diligence process.</p>
     </div>
-
-    <div class="map-section">
-      <div class="map-label module">Cemre's Three-Module Architecture</div>
-      <div class="map-cards">
-        <div class="map-card module-card">
-          <h4>Module 1: Project Tracker</h4>
-          <p>50,000ft view. ~10 execution steps across all deals. Deal lifecycle from creation to completion. Jira for investments.</p>
-          <span class="map-tag" style="background:rgba(74,108,247,0.15);color:#4a6cf7;">MVP — Design First</span>
-        </div>
-        <div class="map-card module-card">
-          <h4>Module 2: Diligence Tracker</h4>
-          <p>AI-surfaced findings matched to questions. Golden answers from Box documents. Four answer states. The core value driver.</p>
-          <span class="map-tag" style="background:rgba(74,108,247,0.15);color:#4a6cf7;">MVP — Highest Complexity</span>
-        </div>
-        <div class="map-card agent-card">
-          <h4>Module 3: Agent Panel</h4>
-          <p>Links to Apollo's 30 existing PE agents. Utility sidebar — sits alongside the work package lifecycle, not within it. Scope creep risk.</p>
-          <span class="map-tag" style="background:rgba(100,100,120,0.15);color:#7a8199;">MVP — Links Only / Out of Framework</span>
-        </div>
-      </div>
+    <div class="card card-sm" style="border-left: 3px solid var(--red);">
+      <h3 style="font-size: 15px; font-weight: 700;">Tab 2: Workstream Tracker</h3>
+      <p style="font-size: 13px; color: var(--text-secondary); margin-top: 6px;">Operational tasks split by advisor or team. Bain, PwC, banks, M&A advisors — each with status, timing, and notes. This is the "who's doing what?" layer.</p>
     </div>
-
-    <div class="connector">
-      <div class="connector-line">reframed as</div>
-    </div>
-
-    <div class="map-section">
-      <div class="map-label wp">Work Package Framework + Tom's System Layer</div>
-      <div class="map-cards">
-        <div class="map-card wp-card">
-          <h4>Define &rarr; Instantiate</h4>
-          <p>Auto-create work package on deal entry. Generate DD questions and workstreams from template. Process initial document upload. Set up Box email.</p>
-        </div>
-        <div class="map-card wp-card">
-          <h4>Retrieve &rarr; Enrich</h4>
-          <p>Daily batch reads Box docs. Extract findings, match to questions. Surface with confidence scores. Handle four answer states including golden answer challenges.</p>
-        </div>
-        <div class="map-card wp-card">
-          <h4>Orchestrate &rarr; Orchestrate</h4>
-          <p>Morning briefing: what changed overnight. Progress by workstream. Stale items. EOD/EOW summaries. Surface when work package is decision-ready.</p>
-        </div>
-      </div>
+    <div class="card card-sm" style="border-left: 3px solid var(--red);">
+      <h3 style="font-size: 15px; font-weight: 700;">Tab 3: Granular Workplan</h3>
+      <p style="font-size: 13px; color: var(--text-secondary); margin-top: 6px;">Each gating item broken into specific sub-questions with assigned owners. This is a drill-down of Tab 1 — more detail on the same questions, not a separate concept.</p>
     </div>
   </div>
 
-  <div class="footer-note">
-    <strong>What changed from v1:</strong> Module 3 (Agent Panel) is now explicitly called out as sitting outside the work package lifecycle — it's a utility, not a stage. The Granular Workplan tab is correctly shown as a drill-down of the Overview, not a separate layer. Tom's system verbs (Define, Retrieve, Orchestrate) are mapped to the deal stages they power.
+  <div class="flow-connector"><span>becomes</span></div>
+
+  <p style="font-size: 12px; font-weight: 600; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">What we're building — three product modules</p>
+  <div class="grid-3" style="margin-bottom: 8px;">
+    <div class="card card-sm" style="border-left: 3px solid var(--accent);">
+      <h3 style="font-size: 15px; font-weight: 700;">Module 1: Project Tracker</h3>
+      <p style="font-size: 13px; color: var(--text-secondary); margin-top: 6px;">A high-level view of all active deals and where each one sits in its lifecycle. Think of it like Jira for investments — roughly 10 stages from deal creation to completion.</p>
+      <span class="badge badge-blue" style="margin-top: 10px;">MVP priority: design first</span>
+    </div>
+    <div class="card card-sm" style="border-left: 3px solid var(--accent);">
+      <h3 style="font-size: 15px; font-weight: 700;">Module 2: Diligence Tracker</h3>
+      <p style="font-size: 13px; color: var(--text-secondary); margin-top: 6px;">The core value driver. AI-surfaced findings matched to due diligence questions. Four answer states (unanswered, suggested, confirmed, challenged). The "golden answer" system.</p>
+      <span class="badge badge-blue" style="margin-top: 10px;">MVP priority: highest complexity</span>
+    </div>
+    <div class="card card-sm" style="border-left: 3px solid var(--text-tertiary); border-style: dashed; border-width: 1px; border-left-width: 3px;">
+      <h3 style="font-size: 15px; font-weight: 700; color: var(--text-tertiary);">Module 3: Agent Panel</h3>
+      <p style="font-size: 13px; color: var(--text-tertiary); margin-top: 6px;">Links to Apollo's 30 existing AI agents for private equity research. In the MVP, this is just a collection of links — no deep integration. It sits alongside the main workflow as a utility, not as a core feature. Explicitly flagged as a scope creep risk.</p>
+      <span class="badge badge-grey" style="margin-top: 10px;">MVP: links only — outside core framework</span>
+    </div>
+  </div>
+
+  <div class="flow-connector"><span>powered by</span></div>
+
+  <p style="font-size: 12px; font-weight: 600; color: var(--green); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">How our framework ties it together</p>
+  <div class="grid-3">
+    <div class="card card-sm" style="border-left: 3px solid var(--green);">
+      <h3 style="font-size: 15px; font-weight: 700;">Define &rarr; Instantiate</h3>
+      <p style="font-size: 13px; color: var(--text-secondary); margin-top: 6px;">Auto-create the work package when a deal is created. Generate the standard question set, build workstream categories, set up the Box email address, and process the associate's initial document upload.</p>
+    </div>
+    <div class="card card-sm" style="border-left: 3px solid var(--green);">
+      <h3 style="font-size: 15px; font-weight: 700;">Retrieve &rarr; Enrich</h3>
+      <p style="font-size: 13px; color: var(--text-secondary); margin-top: 6px;">Each night, process new Box documents. Extract findings and match them to outstanding questions. Handle the four answer states — including surfacing conflicts with previously confirmed answers without overwriting them.</p>
+    </div>
+    <div class="card card-sm" style="border-left: 3px solid var(--green);">
+      <h3 style="font-size: 15px; font-weight: 700;">Orchestrate &rarr; Orchestrate</h3>
+      <p style="font-size: 13px; color: var(--text-secondary); margin-top: 6px;">Generate the morning briefing: what changed overnight, which questions moved state, what's been stale too long. Show progress by workstream. Generate end-of-day and end-of-week summaries. Surface when the work package is decision-ready.</p>
+    </div>
+  </div>
+
+  <div class="callout">
+    <strong>The relationship between the three layers:</strong> The Excel tabs describe what exists today. The modules describe what we're building. The framework (Define → Retrieve → Orchestrate) describes why each module exists and how they connect. Every design decision should answer the question: does this help the work package move from creation to decision faster?
   </div>
 </div>
 
-<!-- VIEW 6: DESIGN CONSTRAINTS -->
+<!-- VIEW 6: DESIGN BOUNDARIES -->
 <div class="view" id="constraints">
-  <div class="constraints">
-    <div class="constraint">
-      <div class="constraint-icon">&#9716;</div>
-      <h3>Batch, Not Real-Time</h3>
-      <div class="constraint-sub batch">From Designer Brief — Data Freshness Model</div>
-      <p>AI processing runs as a daily batch. Documents uploaded during the day are processed overnight. All deal team members see the same state when they log in the next morning.</p>
-      <div class="implication"><strong>Design implication:</strong> The associate's entry point each morning is a "what changed overnight" briefing — not a live feed. The UI should feel like opening a newspaper, not watching a ticker. New suggestions, challenged answers, and stale flags all surface here.</div>
-    </div>
-
-    <div class="constraint">
-      <div class="constraint-icon">&#8613;</div>
-      <h3>The Upload Moment</h3>
-      <div class="constraint-sub upload">From Ilija on the internal call</div>
-      <p>When creating a new deal, there's a document upload step where AI processes the initial docs and auto-populates workstreams. This is the bridge between Instantiate and Enrich — the moment Define hands off to Retrieve.</p>
-      <div class="implication"><strong>Design implication:</strong> "New Deal" is not just a form. It's: name the deal &rarr; upload initial documents &rarr; AI generates questions and workstreams &rarr; associate reviews and adjusts. This is a multi-step creation flow, not a single click.</div>
-    </div>
-
-    <div class="constraint">
-      <div class="constraint-icon">&#9654;</div>
-      <h3>Agent Panel Is a Utility</h3>
-      <div class="constraint-sub agent">From Designer Brief — Module 3 scoping</div>
-      <p>Apollo has 30 existing PE agents. Module 3 provides links to them. It doesn't integrate into the work package lifecycle. Cemre explicitly flagged this as a scope creep risk — MVP is links only.</p>
-      <div class="implication"><strong>Design implication:</strong> The Agent Panel is a sidebar or drawer, not a core workflow step. It should be accessible but not central. Don't design enrichment or orchestration features around it. If it's cut from MVP, the product still works.</div>
-    </div>
-
-    <div class="constraint">
-      <div class="constraint-icon">&#9888;</div>
-      <h3>Scope Boundary</h3>
-      <div class="constraint-sub scope">From Business Requirements — "Won't Have"</div>
-      <p>Conquer builds front-end only. Apollo (Jason Mather) owns back-end (Glean/Box integration). No DealCloud integration. No replacement of Box/Outlook/DealCloud as systems of record. No dependency tracking between deals.</p>
-      <div class="implication"><strong>Design implication:</strong> Every screen must assume data comes from an API that Conquer doesn't control. Design for graceful degradation — what does the UI show when the API is slow, incomplete, or returns unexpected data? The API contract is not yet defined (flagged as a gap in Tom's alignment doc).</div>
-    </div>
+  <div class="view-intro">
+    <h2>Boundaries that shape the design</h2>
+    <p>Four real-world constraints that will directly affect every screen and interaction. Each one is sourced from a specific document or conversation with the Apollo team.</p>
   </div>
 
-  <div class="footer-note">
-    <strong>Why this tab exists:</strong> The work package framework describes the "what" and "why." These constraints describe the "but also" — the real-world boundaries that will shape every screen Ilija designs. Each one traces back to a specific source document or conversation.
+  <div class="grid-2">
+    <div class="constraint-card">
+      <div class="c-icon">&#128337;</div>
+      <h3>Processing happens overnight, not in real time</h3>
+      <div class="c-source" style="color: var(--orange);">Source: Apollo's Designer Brief — Data Freshness Model</div>
+      <p>When a document is uploaded to Box during the day, it isn't processed immediately. AI analysis runs as a nightly batch job. Every member of the deal team sees the exact same state when they log in the next morning — there are no real-time updates during the workday.</p>
+      <div class="c-implication"><strong>What this means for the design:</strong> The primary entry point for associates each morning should be a "what changed overnight" briefing — not a live feed. Think of the experience as opening a newspaper, not watching a stock ticker. New AI suggestions, challenged answers, and stale flags all appear here.</div>
+    </div>
+
+    <div class="constraint-card">
+      <div class="c-icon">&#128228;</div>
+      <h3>Creating a deal is a multi-step process</h3>
+      <div class="c-source" style="color: var(--green);">Source: Internal design review — flagged by Ilija (lead designer)</div>
+      <p>When someone taps "New Deal," it's not a simple form. The associate needs to name the deal, upload an initial batch of documents, and then review the AI-generated questions and workstreams before confirming. This is the handoff point where "Define" passes to "Retrieve" — the system's first opportunity to demonstrate its value.</p>
+      <div class="c-implication"><strong>What this means for the design:</strong> The deal creation flow should feel like a guided setup wizard, not a blank form. Step 1: name and categorise. Step 2: upload initial documents. Step 3: review AI-generated questions and workstreams. Step 4: confirm and launch. Each step should feel purposeful.</div>
+    </div>
+
+    <div class="constraint-card">
+      <div class="c-icon">&#128279;</div>
+      <h3>The Agent Panel is a utility, not a core feature</h3>
+      <div class="c-source" style="color: var(--text-tertiary);">Source: Apollo's Designer Brief — Module 3 scoping</div>
+      <p>Apollo has 30 existing AI agents for private equity research tasks. Module 3 of the product provides links to these agents. It does not integrate into the core workflow and has been explicitly flagged as a scope creep risk by Apollo's product lead (Cemre Erbay). In the MVP, it's links only.</p>
+      <div class="c-implication"><strong>What this means for the design:</strong> Position the Agent Panel as a sidebar or expandable drawer — accessible but never central. Don't design enrichment or orchestration features around it. If Module 3 were removed entirely, the product should still function perfectly. Design accordingly.</div>
+    </div>
+
+    <div class="constraint-card">
+      <div class="c-icon">&#9888;&#65039;</div>
+      <h3>We build the front-end only</h3>
+      <div class="c-source" style="color: var(--red);">Source: Business Requirements — Scope Boundary</div>
+      <p>Conquer builds the user interface and front-end application. Apollo's internal team (led by Jason Mather, Head of AI Engineering) builds and owns the back-end: the AI processing, the Box/Glean integration, and the data pipeline. There will be no DealCloud integration. Box, Outlook, and DealCloud remain Apollo's systems of record — this product does not replace any of them.</p>
+      <div class="c-implication"><strong>What this means for the design:</strong> Every screen must assume data comes from an API that Conquer doesn't control. Design for graceful degradation — what does the UI show when the API is slow, when data is incomplete, or when a batch job hasn't run yet? The exact API contract between Conquer's front-end and Apollo's back-end is not yet defined.</div>
+    </div>
   </div>
 </div>
 
-<!-- VIEW 7: CROSS-CLIENT PATTERN -->
+<!-- VIEW 7: THE PATTERN -->
 <div class="view" id="crossclient">
-  <div class="cross-client">
-    <div class="client-row header-row">
-      <div class="cell">Client</div>
-      <div class="cell">Work Package</div>
-      <div class="cell">Entry Trigger</div>
-      <div class="cell">Enrichment Process</div>
-      <div class="cell">End State</div>
-    </div>
-    <div class="client-row">
-      <div class="cell">News UK</div>
-      <div class="cell">News Wire</div>
-      <div class="cell">Breaking event or tip arrives via wire service</div>
-      <div class="cell">Editorial, images, fact-checking, multi-platform formatting, approvals</div>
-      <div class="cell">Published article across Times, Sun, etc.</div>
-    </div>
-    <div class="client-row">
-      <div class="cell">Lingoto</div>
-      <div class="cell">Trade</div>
-      <div class="cell">Signal appears on order management system</div>
-      <div class="cell">Calculation, risk assessment, compliance check, approval chain</div>
-      <div class="cell">Executed trade</div>
-    </div>
-    <div class="client-row">
-      <div class="cell">ITAU</div>
-      <div class="cell">Investment Signal</div>
-      <div class="cell">Analyst identifies interesting signal in their sector</div>
-      <div class="cell">Research, data gathering, thesis building, pitch deck creation</div>
-      <div class="cell">Investable pitch presented to decision-makers</div>
-    </div>
-    <div class="client-row">
-      <div class="cell">Conquer</div>
-      <div class="cell">Sales Opportunity</div>
-      <div class="cell">Intro received from network or inbound</div>
-      <div class="cell">Discovery, POC, proposal, negotiation</div>
-      <div class="cell">Signed contract</div>
-    </div>
-    <div class="client-row">
-      <div class="cell cell-highlight">Apollo</div>
-      <div class="cell cell-highlight">Deal</div>
-      <div class="cell cell-highlight">Opportunity passes screening into diligence</div>
-      <div class="cell cell-highlight">Document gathering, question answering, workstream tracking, advisor coordination</div>
-      <div class="cell cell-highlight">Go/no-go investment decision</div>
-    </div>
+  <div class="view-intro">
+    <h2>A pattern we've seen before</h2>
+    <p>Apollo's deal tracker is a specific instance of a problem Conquer has solved across multiple industries. In every case, the core structure is the same: a "work package" starts as raw input, gets enriched by multiple people from multiple sources under time pressure, and ends as a decision-ready output. The tools differ, but the workflow shape is identical.</p>
   </div>
 
-  <div class="footer-note">
-    <strong>A note on abstraction:</strong> This pattern is useful for explaining why Conquer has seen this problem before — it builds credibility with Apollo. But the enrichment processes across clients are fundamentally different (editorial vs analytical vs computational). The pattern identifies <em>where</em> to look for value; the specific product design must come from Apollo's actual documents, users, and constraints, not from cross-client analogy.
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Client</th>
+          <th>The work package</th>
+          <th>What triggers it</th>
+          <th>How it gets enriched</th>
+          <th>What it becomes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>News UK</td>
+          <td>A breaking news story</td>
+          <td>A tip or wire report arrives</td>
+          <td>Journalists write, editors fact-check, images are sourced, the story is formatted for print and digital</td>
+          <td>Published article across The Times, The Sun, etc.</td>
+        </tr>
+        <tr>
+          <td>Lingoto</td>
+          <td>A financial trade</td>
+          <td>A trading signal appears on the order management system</td>
+          <td>Calculations run, risk is assessed, compliance checks are passed, approvals are collected</td>
+          <td>An executed trade</td>
+        </tr>
+        <tr>
+          <td>ITAU</td>
+          <td>An investment signal</td>
+          <td>An analyst spots something interesting in their sector</td>
+          <td>Research is gathered, data is analysed, a thesis is built, a pitch deck is created</td>
+          <td>An investment pitch presented to decision-makers</td>
+        </tr>
+        <tr>
+          <td>Conquer</td>
+          <td>A sales opportunity</td>
+          <td>An introduction arrives from the network or inbound</td>
+          <td>Discovery calls, proof of concept, proposal writing, negotiation</td>
+          <td>A signed contract</td>
+        </tr>
+        <tr class="row-highlight">
+          <td>Apollo</td>
+          <td>A PE deal in diligence</td>
+          <td>An opportunity passes screening</td>
+          <td>Documents gathered, questions answered, workstreams tracked, advisors coordinated</td>
+          <td>A go/no-go investment decision</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout">
+    <strong>An honest note on this analogy:</strong> This pattern is useful for explaining why Conquer has relevant experience — we've built enrichment and orchestration systems before. But the enrichment processes across these clients are fundamentally different: editorial work at News UK, quantitative calculation at Lingoto, analytical research at Apollo. The pattern shows where to look for value. The specific product design comes from Apollo's actual documents, users, and constraints — not from cross-client analogy.
   </div>
 </div>
+
+</div><!-- end .content -->
 
 <script>
 function showView(id) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(t => t.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   event.target.classList.add('active');
 }
